@@ -1,0 +1,160 @@
+"""
+Configuration file for the Multi-Agent Medical Chatbot
+
+This file contains all the configuration parameters for the project.
+
+LLM / Embedding stack (FREE / open-source):
+  - Text LLM:    Groq  -> llama-3.3-70b-versatile        (env: GROQ_MODEL_NAME)
+  - Vision LLM:  Groq  -> meta-llama/llama-4-scout...     (env: GROQ_VISION_MODEL_NAME)
+  - Embeddings:  HuggingFace -> BAAI/bge-large-en-v1.5    (env: EMBEDDING_MODEL_NAME), runs locally
+
+Each llm definition has a unique temperature value relevant to the specific class.
+"""
+
+import os
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from langchain_huggingface import HuggingFaceEmbeddings
+
+# Load environment variables from .env file
+load_dotenv()
+
+# --- Shared model names from environment ---------------------------------
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
+GROQ_VISION_MODEL_NAME = os.getenv("GROQ_VISION_MODEL_NAME", "meta-llama/llama-4-scout-17b-16e-instruct")
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "BAAI/bge-large-en-v1.5")
+
+
+def make_llm(temperature: float, model_name: str = None) -> ChatGroq:
+    """Factory for a Groq chat model with the given temperature."""
+    return ChatGroq(
+        model=model_name or GROQ_MODEL_NAME,
+        api_key=GROQ_API_KEY,
+        temperature=temperature,
+    )
+
+
+class AgentDecisoinConfig:
+    def __init__(self):
+        self.llm = make_llm(temperature=0.1)  # Deterministic
+
+
+class ConversationConfig:
+    def __init__(self):
+        self.llm = make_llm(temperature=0.7)  # Creative but factual
+
+
+class WebSearchConfig:
+    def __init__(self):
+        self.llm = make_llm(temperature=0.3)  # Slightly creative but factual
+        self.context_limit = 20     # include last 20 messsages (10 Q&A pairs) in history
+
+
+class RAGConfig:
+    def __init__(self):
+        self.vector_db_type = "qdrant"
+        self.embedding_dim = 1024  # BAAI/bge-large-en-v1.5 produces 1024-dim vectors
+        self.distance_metric = "Cosine"  # Add this with a default value
+        self.use_local = True  # Add this with a default value
+        self.vector_local_path = "./data/qdrant_db"  # Add this with a default value
+        self.doc_local_path = "./data/docs_db"
+        self.parsed_content_dir = "./data/parsed_docs"
+        self.url = os.getenv("QDRANT_URL")
+        self.api_key = os.getenv("QDRANT_API_KEY")
+        self.collection_name = "medical_assistance_rag"  # Ensure a valid name
+        self.chunk_size = 512  # Modify based on documents and performance
+        self.chunk_overlap = 50  # Modify based on documents and performance
+
+        # Initialize HuggingFace embeddings (runs locally, no API key needed)
+        self.embedding_model = HuggingFaceEmbeddings(
+            model_name=EMBEDDING_MODEL_NAME,
+            encode_kwargs={"normalize_embeddings": True},  # recommended for bge models
+        )
+        self.llm = make_llm(temperature=0.3)  # Slightly creative but factual
+        # Image summarization sends images to the model -> needs a VISION-capable model
+        self.summarizer_model = make_llm(temperature=0.5, model_name=GROQ_VISION_MODEL_NAME)
+        self.chunker_model = make_llm(temperature=0.0)  # factual
+        self.response_generator_model = make_llm(temperature=0.3)  # Slightly creative but factual
+        self.top_k = 5
+        self.vector_search_type = 'similarity'  # or 'mmr'
+
+        self.huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
+
+        self.reranker_model = "cross-encoder/ms-marco-TinyBERT-L-6"
+        self.reranker_top_k = 3
+
+        self.max_context_length = 8192  # (Change based on your need)
+
+        self.include_sources = True  # Show links to reference documents and images along with corresponding query response
+
+        # ADJUST ACCORDING TO ASSISTANT'S BEHAVIOUR BASED ON THE DATA INGESTED:
+        self.min_retrieval_confidence = 0.40  # The auto routing from RAG agent to WEB_SEARCH agent is dependent on this value
+
+        self.context_limit = 20     # include last 20 messsages (10 Q&A pairs) in history
+
+
+class MedicalCVConfig:
+    def __init__(self):
+        self.brain_tumor_model_path = "./agents/image_analysis_agent/brain_tumor_agent/models/brain_tumor_segmentation.pth"
+        self.chest_xray_model_path = "./agents/image_analysis_agent/chest_xray_agent/models/covid_chest_xray_model.pth"
+        self.skin_lesion_model_path = "./agents/image_analysis_agent/skin_lesion_agent/models/checkpointN25_.pth.tar"
+        self.skin_lesion_segmentation_output_path = "./uploads/skin_lesion_output/segmentation_plot.png"
+        # Image-type classification needs a VISION-capable model (Llama 3.3 70B is text-only)
+        self.llm = make_llm(temperature=0.1, model_name=GROQ_VISION_MODEL_NAME)
+
+
+class SpeechConfig:
+    def __init__(self):
+        self.eleven_labs_api_key = os.getenv("ELEVEN_LABS_API_KEY")  # Replace with your actual key
+        self.eleven_labs_voice_id = "21m00Tcm4TlvDq8ikWAM"    # Default voice ID (Rachel)
+
+
+class ValidationConfig:
+    def __init__(self):
+        self.require_validation = {
+            "CONVERSATION_AGENT": False,
+            "RAG_AGENT": False,
+            "WEB_SEARCH_AGENT": False,
+            "BRAIN_TUMOR_AGENT": True,
+            "CHEST_XRAY_AGENT": True,
+            "SKIN_LESION_AGENT": True
+        }
+        self.validation_timeout = 300
+        self.default_action = "reject"
+
+
+class APIConfig:
+    def __init__(self):
+        self.host = "0.0.0.0"
+        self.port = 8000
+        self.debug = True
+        self.rate_limit = 10
+        self.max_image_upload_size = 5  # max upload size in MB
+
+
+class UIConfig:
+    def __init__(self):
+        self.theme = "light"
+        # self.max_chat_history = 50
+        self.enable_speech = True
+        self.enable_image_upload = True
+
+
+class Config:
+    def __init__(self):
+        self.agent_decision = AgentDecisoinConfig()
+        self.conversation = ConversationConfig()
+        self.rag = RAGConfig()
+        self.medical_cv = MedicalCVConfig()
+        self.web_search = WebSearchConfig()
+        self.api = APIConfig()
+        self.speech = SpeechConfig()
+        self.validation = ValidationConfig()
+        self.ui = UIConfig()
+        self.eleven_labs_api_key = os.getenv("ELEVEN_LABS_API_KEY")
+        self.tavily_api_key = os.getenv("TAVILY_API_KEY")
+        self.max_conversation_history = 20  # Include last 20 messsages (10 Q&A pairs) in history
+
+# # Example usage
+# config = Config()
