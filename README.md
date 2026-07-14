@@ -27,7 +27,6 @@
 - [Installation & Setup](#-installation--setup)
 - [Usage](#-usage)
 - [Roadmap](#-roadmap)
-- [Credits & Attribution](#-credits--attribution)
 - [License](#-license)
 - [Disclaimer](#-disclaimer)
 
