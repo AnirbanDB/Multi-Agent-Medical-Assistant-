@@ -296,11 +296,7 @@ docker run -d --name medical-assistant-app -p 8000:8000 --env-file .env \
 
 ---
 
-## 🙏 Credits & Attribution
 
-This project is **based on and adapted from** the original open-source work by **Souvik Majumder** — [github.com/souvikmajumder26/Multi-Agent-Medical-Assistant](https://github.com/souvikmajumder26/Multi-Agent-Medical-Assistant), licensed under Apache-2.0.
-
-**Modifications in this fork include:** migration to a fully free / open-source model stack (Groq-hosted Llama for LLM & vision, local `bge-large` embeddings, updated Qdrant Cloud integration), cost-optimized ElevenLabs voice models, and expanded documentation.
 
 Please retain this attribution and the `LICENSE` file when redistributing, as required by Apache-2.0.
 
@@ -314,4 +310,4 @@ Licensed under the **Apache-2.0 License**. See [LICENSE](LICENSE).
 
 ## ⚠️ Disclaimer
 
-This software is for **educational and research purposes only**. It is **not** a medical device and must **not** be used for real clinical diagnosis or treatment decisions. Always consult a licensed healthcare professional.
+This software is for **educational and research purposes only**.
